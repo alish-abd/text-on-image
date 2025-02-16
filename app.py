@@ -7,7 +7,9 @@ app = Flask(__name__)
 
 # Logo URL (Replace with your actual logo URL)
 LOGO_URL = "https://i.postimg.cc/pLmxYnmy/image-1.png"
-FONT_URL = "https://github.com/google/fonts/raw/main/apache/roboto/Roboto-Bold.ttf"  # Free Google Font
+
+# Load font from local file
+FONT_PATH = "Montserrat-Bold.ttf"
 
 @app.route('/')
 def home():
@@ -40,19 +42,16 @@ def edit_image():
         # Paste the logo onto the image
         img.paste(logo, (logo_x, logo_y), logo)
 
-        # Add text
+        # Load Montserrat font (Size 56px)
+        font = ImageFont.truetype(FONT_PATH, 56)
+
+        # Add text (Centered, 42px above logo)
         draw = ImageDraw.Draw(img)
-
-        # Load a proper font (Download and use Roboto-Bold)
-        font_response = requests.get(FONT_URL)
-        font = ImageFont.truetype(BytesIO(font_response.content), 56)  # Set font size 56px
-
-        # Calculate text size and position (Centered, 42px above logo)
         text_width, text_height = draw.textbbox((0, 0), text, font=font)[2:]
         text_x = (img.width - text_width) // 2
         text_y = logo_y - text_height - 42  # 42px above logo
 
-        # Draw text with white color
+        # Draw text in white
         draw.text((text_x, text_y), text, (255, 255, 255), font=font)
 
         # Save edited image to memory
