@@ -41,15 +41,15 @@ def edit_image():
 
         # Add text
         draw = ImageDraw.Draw(img)
-        
-        # Load a better font (Fallback if no TTF)
+
+        # Load a better font (Use Arial, or fallback)
         try:
-            font = ImageFont.truetype("arial.ttf", 56)  # Use Arial (or replace with your font)
+            font = ImageFont.truetype("arial.ttf", 56)  # Use Arial
         except IOError:
             font = ImageFont.load_default()
 
         # Calculate text size and position (Centered, 42px above logo)
-        text_width, text_height = draw.textsize(text, font=font)
+        text_width, text_height = font.getbbox(text)[2:]  # Get text size
         text_x = (img.width - text_width) // 2
         text_y = logo_y - text_height - 42  # 42px above logo
 
