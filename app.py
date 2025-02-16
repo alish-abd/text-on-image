@@ -5,8 +5,9 @@ from io import BytesIO
 
 app = Flask(__name__)
 
-# Logo URL (Replace with your own logo URL)
+# Logo URL (Replace with your actual logo URL)
 LOGO_URL = "https://i.postimg.cc/pLmxYnmy/image-1.png"
+FONT_URL = "https://github.com/google/fonts/raw/main/apache/roboto/Roboto-Bold.ttf"  # Free Google Font
 
 @app.route('/')
 def home():
@@ -42,14 +43,12 @@ def edit_image():
         # Add text
         draw = ImageDraw.Draw(img)
 
-        # Load a better font (Use Arial, or fallback)
-        try:
-            font = ImageFont.truetype("arial.ttf", 56)  # Use Arial
-        except IOError:
-            font = ImageFont.load_default()
+        # Load a proper font (Download and use Roboto-Bold)
+        font_response = requests.get(FONT_URL)
+        font = ImageFont.truetype(BytesIO(font_response.content), 56)  # Set font size 56px
 
         # Calculate text size and position (Centered, 42px above logo)
-        text_width, text_height = font.getbbox(text)[2:]  # Get text size
+        text_width, text_height = draw.textbbox((0, 0), text, font=font)[2:]
         text_x = (img.width - text_width) // 2
         text_y = logo_y - text_height - 42  # 42px above logo
 
