@@ -53,81 +53,61 @@ def edit_image():
         logo = Image.open(BytesIO(logo_response.content)).convert("RGBA")
         logo = logo.resize((252, 44), Image.LANCZOS)
 
-        # 3. Create a smooth black gradient at the bottom
-        gradient_height = 300
-        gradient = Image.new('L', (img.width, gradient_height), 0)
-        for y in range(gradient.height):
-            # fade from transparent (0) at top to opaque (255) at bottom
-            opacity = int(255 * (y / float(gradient.height)))
-            gradient.putpixel((0, y), opacity)
+        # 3. Create a vertical gradient from bottom (80% black) to midpoint (0% black)
+        half_height = img.height // 2  # The gradient will cover the bottom half
+        # Single-column gradient (1 px wide, half_height tall)
+        gradient_col = Image.new('L', (1, half_height), 0)
+        
+        # Fill from top (0% alpha) to bottom (80% alpha = ~204)
+        for y in range(half_height):
+            # y=0 (top of gradient) => alpha=0
+            # y=half_height-1 (bottom of gradient) => alpha=204
+            alpha = int(204 * (y / float(half_height - 1)))
+            gradient_col.putpixel((0, y), alpha)
 
-        gradient = gradient.resize((img.width, gradient_height))
+        # Stretch that single-column gradient to the full image width
+        gradient = gradient_col.resize((img.width, half_height))
+
+        # 4. Paste the black rectangle masked by our gradient onto the bottom half
         gradient_overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
-        # Paste a solid black rectangle, masked by our gradient
-        gradient_overlay.paste(
-            Image.new("RGBA", (img.width, gradient_height), (0, 0, 0, 255)),
-            (0, img.height - gradient_height),
-            gradient
-        )
+        black_rect = Image.new("RGBA", (img.width, half_height), (0, 0, 0, 255))
+        # Position: bottom of the image
+        gradient_overlay.paste(black_rect, (0, img.height - half_height), gradient)
+
+        # 5. Merge the gradient overlay with the image
         img = Image.alpha_composite(img.convert("RGBA"), gradient_overlay)
 
-        # 4. Paste the logo (centered, 50px from bottom)
+        # 6. Paste the logo (centered, 50px from bottom)
         logo_x = (img.width - logo.width) // 2
         logo_y = img.height - logo.height - 50
         img.paste(logo, (logo_x, logo_y), logo)
 
-        # 5. Prepare to draw text
+        # 7. Prepare to draw text (wrap to avoid overflow)
         draw = ImageDraw.Draw(img)
         font_size = 56
         font = ImageFont.truetype(FONT_PATH, font_size)
 
-        # 6. Wrap text so it doesn't go beyond image width (with some padding)
-        max_text_width = int(img.width * 0.85)  # 85% of width for safety
+        max_text_width = int(img.width * 0.85)  # 85% of width
         lines = wrap_text(draw, text, font, max_text_width)
         line_height = draw.textbbox((0, 0), "Ay", font=font)[3]  # approximate line height
         num_lines = len(lines)
 
-        # 7. Calculate total text height
+        # 8. Calculate total text height & position
         total_text_height = line_height * num_lines
-
-        # We want the **bottom line** to be 42px above the logo
-        bottom_line_y = logo_y - 42 - line_height  # This is where the last line starts
-        # So the top line will be:
+        # Bottom line is 42px above the logo
+        bottom_line_y = logo_y - 42 - line_height
+        # The top line is above that
         top_line_y = bottom_line_y - (num_lines - 1) * line_height
-
-        # 8. Draw a semi-transparent black rectangle behind the wrapped text
-        #    This ensures high contrast even if the gradient isn't dark enough
-        text_overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
-        overlay_draw = ImageDraw.Draw(text_overlay)
-
-        # Rectangle bounds
-        padding = 20
-        rect_left = 0
-        rect_top = top_line_y - padding
-        rect_right = img.width
-        rect_bottom = bottom_line_y + line_height + padding
-
-        # Make sure we don't go above the image if text is large
-        if rect_top < 0:
-            rect_top = 0
-
-        overlay_draw.rectangle(
-            [rect_left, rect_top, rect_right, rect_bottom],
-            fill=(0, 0, 0, 180)  # black with ~70% opacity
-        )
 
         # 9. Draw each line centered horizontally
         current_y = top_line_y
         for line in lines:
             text_width, text_height = draw.textbbox((0, 0), line, font=font)[2:]
             text_x = (img.width - text_width) // 2
-            overlay_draw.text((text_x, current_y), line, font=font, fill=(255, 255, 255, 255))
+            draw.text((text_x, current_y), line, font=font, fill=(255, 255, 255, 255))
             current_y += line_height
 
-        # 10. Composite the text overlay onto the original image
-        img = Image.alpha_composite(img, text_overlay)
-
-        # 11. Output final image
+        # 10. Output final image
         output = BytesIO()
         img.convert("RGB").save(output, format="JPEG", quality=90)
         output.seek(0)
