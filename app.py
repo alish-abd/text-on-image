@@ -89,7 +89,7 @@ def edit_image():
 
         # Prepare and draw text
         draw = ImageDraw.Draw(img)
-        font_size = 56
+        font_size = 64
         font = ImageFont.truetype(FONT_PATH, font_size)
 
         max_text_width = int(img.width * 0.85)
@@ -98,7 +98,7 @@ def edit_image():
         num_lines = len(lines)
 
         total_text_height = line_height * num_lines
-        bottom_line_y = logo_y - 42 - line_height
+        bottom_line_y = logo_y - 100 - line_height
         top_line_y = bottom_line_y - (num_lines - 1) * line_height
 
         current_y = top_line_y
@@ -110,7 +110,7 @@ def edit_image():
 
         # 6. Draw a rectangle (5px height, 80% width) in the gap between text and logo
         rect_width = int(img.width * 0.8)
-        rect_height = 5
+        rect_height = 8
         rect_color = "#9B050B"
 
         # Midpoint of the gap between bottom line of text and logo
