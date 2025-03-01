@@ -77,22 +77,22 @@ def edit_image():
         gradient = gradient_col.resize((img.width, half_height))
 
         # # Apply gradient overlay
-        # gradient_overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
-        # black_rect = Image.new("RGBA", (img.width, half_height), (0, 0, 0, 255))
-        # gradient_overlay.paste(black_rect, (0, img.height - half_height), gradient)
-        # img = Image.alpha_composite(img.convert("RGBA"), gradient_overlay)
+        gradient_overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        black_rect = Image.new("RGBA", (img.width, half_height), (0, 0, 0, 255))
+        gradient_overlay.paste(black_rect, (0, img.height - half_height), gradient)
+        img = Image.alpha_composite(img.convert("RGBA"), gradient_overlay)
 
 
         # Increase gradient height to 80% of the image height
-        gradient_height = int(img.height * 0.8)
+        # gradient_height = int(img.height * 0.8)
 
-        # Create the gradient overlay
-        gradient_overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
-        black_rect = Image.new("RGBA", (img.width, gradient_height), (0, 0, 0, 255))
-        gradient_overlay.paste(black_rect, (0, img.height - gradient_height), gradient)
+        # # Create the gradient overlay
+        # gradient_overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        # black_rect = Image.new("RGBA", (img.width, gradient_height), (0, 0, 0, 255))
+        # gradient_overlay.paste(black_rect, (0, img.height - gradient_height), gradient)
         
-        # Apply the new gradient
-        img = Image.alpha_composite(img.convert("RGBA"), gradient_overlay)
+        # # Apply the new gradient
+        # img = Image.alpha_composite(img.convert("RGBA"), gradient_overlay)
 
         
 
