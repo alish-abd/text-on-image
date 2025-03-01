@@ -108,21 +108,20 @@ def edit_image():
             draw.text((text_x, current_y), line, font=font, fill=(255, 255, 255, 255))
             current_y += line_height
 
-# 6. Draw a rectangle (5px height, 80% width) in the gap between text and logo
-rect_width = int(img.width * 0.8)
-rect_height = 5
-rect_color = "#9B050B"
+        # 6. Draw a rectangle (5px height, 80% width) in the gap between text and logo
+        rect_width = int(img.width * 0.8)
+        rect_height = 5
+        rect_color = "#9B050B"
 
-# Calculate the vertical midpoint between the bottom of the text and the top of the logo
-gap_mid = (bottom_line_y + logo_y) // 2
-rect_y = gap_mid - (rect_height // 2)
-rect_x = (img.width - rect_width) // 2
+        # Midpoint of the gap between bottom line of text and logo
+        gap_mid = (bottom_line_y + logo_y) // 2
+        rect_y = gap_mid - (rect_height // 2)
+        rect_x = (img.width - rect_width) // 2
 
-draw.rectangle(
-    [rect_x, rect_y, rect_x + rect_width, rect_y + rect_height],
-    fill=rect_color
-)
-
+        draw.rectangle(
+            [rect_x, rect_y, rect_x + rect_width, rect_y + rect_height],
+            fill=rect_color
+        )
 
         # Convert final image to bytes
         output = BytesIO()
