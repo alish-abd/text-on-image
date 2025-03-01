@@ -105,7 +105,7 @@ def edit_image():
 
         # Prepare and draw text
         draw = ImageDraw.Draw(img)
-        font_size = 72
+        font_size = 60
         font = ImageFont.truetype(FONT_PATH, font_size)
 
         max_text_width = int(img.width * 0.85)
@@ -140,7 +140,7 @@ def edit_image():
         # )
 
         # Choose a fraction between 0 and 1; higher = closer to the logo
-        fraction = 0.6
+        fraction = 0.4
 
         gap_mid = bottom_line_y + int((logo_y - bottom_line_y) * fraction)
         rect_y = gap_mid - (rect_height // 2)
