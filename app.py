@@ -72,9 +72,11 @@ def edit_image():
         half_height = img.height // 2
         gradient_col = Image.new('L', (1, half_height), 0)
         for y in range(half_height):
-            alpha = int(204 * (y / float(half_height - 1)))
+            alpha = int(230 * (y / float(half_height - 1)))
             gradient_col.putpixel((0, y), alpha)
         gradient = gradient_col.resize((img.width, half_height))
+
+       
 
         # # Apply gradient overlay
         gradient_overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
@@ -128,7 +130,19 @@ def edit_image():
         rect_color = "#9B050B"
 
         # Midpoint of the gap between bottom line of text and logo
-        gap_mid = (bottom_line_y + logo_y) // 2
+        # gap_mid = (bottom_line_y + logo_y) // 2
+        # rect_y = gap_mid - (rect_height // 2)
+        # rect_x = (img.width - rect_width) // 2
+
+        # draw.rectangle(
+        #     [rect_x, rect_y, rect_x + rect_width, rect_y + rect_height],
+        #     fill=rect_color
+        # )
+
+        # Choose a fraction between 0 and 1; higher = closer to the logo
+        fraction = 0.7
+
+        gap_mid = bottom_line_y + int((logo_y - bottom_line_y) * fraction)
         rect_y = gap_mid - (rect_height // 2)
         rect_x = (img.width - rect_width) // 2
 
