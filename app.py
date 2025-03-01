@@ -114,7 +114,7 @@ def edit_image():
         num_lines = len(lines)
 
         total_text_height = line_height * num_lines
-        bottom_line_y = logo_y - 120 - line_height
+        bottom_line_y = logo_y - 60 - line_height
         top_line_y = bottom_line_y - (num_lines - 1) * line_height
 
         current_y = top_line_y
@@ -140,7 +140,7 @@ def edit_image():
         # )
 
         # Choose a fraction between 0 and 1; higher = closer to the logo
-        fraction = 0.7
+        fraction = 0.6
 
         gap_mid = bottom_line_y + int((logo_y - bottom_line_y) * fraction)
         rect_y = gap_mid - (rect_height // 2)
