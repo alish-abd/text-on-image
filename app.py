@@ -5,7 +5,8 @@ from io import BytesIO
 
 app = Flask(__name__)
 
-LOGO_URL = "https://i.postimg.cc/pLmxYnmy/image-1.png"
+# Default logo URL can still be used if none is provided in the request.
+DEFAULT_LOGO_URL = "https://i.postimg.cc/pLmxYnmy/image-1.png"
 FONT_PATH = "Montserrat-Bold.ttf"
 
 @app.route('/')
@@ -42,14 +43,15 @@ def edit_image():
         data = request.get_json()
         image_url = data.get("image_url")
         text = data.get("text", "Default Text")
+        logo_url = data.get("logo_url", DEFAULT_LOGO_URL)
 
         # 1. Download and load the base image
         response = requests.get(image_url)
         img = Image.open(BytesIO(response.content)).convert("RGB")
         img = img.resize((1080, 1080), Image.LANCZOS)
 
-        # 2. Download and resize the logo
-        logo_response = requests.get(LOGO_URL)
+        # 2. Download and resize the logo using the provided logo_url
+        logo_response = requests.get(logo_url)
         logo = Image.open(BytesIO(logo_response.content)).convert("RGBA")
         logo = logo.resize((252, 44), Image.LANCZOS)
 
@@ -60,8 +62,6 @@ def edit_image():
         
         # Fill from top (0% alpha) to bottom (80% alpha = ~204)
         for y in range(half_height):
-            # y=0 (top of gradient) => alpha=0
-            # y=half_height-1 (bottom of gradient) => alpha=204
             alpha = int(204 * (y / float(half_height - 1)))
             gradient_col.putpixel((0, y), alpha)
 
@@ -71,7 +71,6 @@ def edit_image():
         # 4. Paste the black rectangle masked by our gradient onto the bottom half
         gradient_overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
         black_rect = Image.new("RGBA", (img.width, half_height), (0, 0, 0, 255))
-        # Position: bottom of the image
         gradient_overlay.paste(black_rect, (0, img.height - half_height), gradient)
 
         # 5. Merge the gradient overlay with the image
@@ -94,15 +93,13 @@ def edit_image():
 
         # 8. Calculate total text height & position
         total_text_height = line_height * num_lines
-        # Bottom line is 42px above the logo
-        bottom_line_y = logo_y - 42 - line_height
-        # The top line is above that
+        bottom_line_y = logo_y - 42 - line_height  # Bottom line is 42px above the logo
         top_line_y = bottom_line_y - (num_lines - 1) * line_height
 
         # 9. Draw each line centered horizontally
         current_y = top_line_y
         for line in lines:
-            text_width, text_height = draw.textbbox((0, 0), line, font=font)[2:]
+            text_width, _ = draw.textbbox((0, 0), line, font=font)[2:]
             text_x = (img.width - text_width) // 2
             draw.text((text_x, current_y), line, font=font, fill=(255, 255, 255, 255))
             current_y += line_height
