@@ -76,11 +76,25 @@ def edit_image():
             gradient_col.putpixel((0, y), alpha)
         gradient = gradient_col.resize((img.width, half_height))
 
-        # Apply gradient overlay
+        # # Apply gradient overlay
+        # gradient_overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        # black_rect = Image.new("RGBA", (img.width, half_height), (0, 0, 0, 255))
+        # gradient_overlay.paste(black_rect, (0, img.height - half_height), gradient)
+        # img = Image.alpha_composite(img.convert("RGBA"), gradient_overlay)
+
+
+        # Increase gradient height to 80% of the image height
+        gradient_height = int(img.height * 0.8)
+
+        # Create the gradient overlay
         gradient_overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
-        black_rect = Image.new("RGBA", (img.width, half_height), (0, 0, 0, 255))
-        gradient_overlay.paste(black_rect, (0, img.height - half_height), gradient)
+        black_rect = Image.new("RGBA", (img.width, gradient_height), (0, 0, 0, 255))
+        gradient_overlay.paste(black_rect, (0, img.height - gradient_height), gradient)
+        
+        # Apply the new gradient
         img = Image.alpha_composite(img.convert("RGBA"), gradient_overlay)
+
+        
 
         # Paste the logo
         logo_x = (img.width - logo.width) // 2
@@ -89,7 +103,7 @@ def edit_image():
 
         # Prepare and draw text
         draw = ImageDraw.Draw(img)
-        font_size = 64
+        font_size = 72
         font = ImageFont.truetype(FONT_PATH, font_size)
 
         max_text_width = int(img.width * 0.85)
@@ -98,7 +112,7 @@ def edit_image():
         num_lines = len(lines)
 
         total_text_height = line_height * num_lines
-        bottom_line_y = logo_y - 100 - line_height
+        bottom_line_y = logo_y - 120 - line_height
         top_line_y = bottom_line_y - (num_lines - 1) * line_height
 
         current_y = top_line_y
