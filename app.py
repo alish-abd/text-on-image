@@ -56,6 +56,7 @@ def edit_image():
         data = request.get_json()
         image_url = data.get("image_url")
         text = data.get("text", "Default Text")
+        text = text.upper()
         logo_url = data.get("logo_url", DEFAULT_LOGO_URL)
 
         # Download base image
@@ -140,7 +141,7 @@ def edit_image():
         # )
 
         # Choose a fraction between 0 and 1; higher = closer to the logo
-        fraction = 0.4
+        fraction = 0.9
 
         gap_mid = bottom_line_y + int((logo_y - bottom_line_y) * fraction)
         rect_y = gap_mid - (rect_height // 2)
