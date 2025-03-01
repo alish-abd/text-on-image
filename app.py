@@ -1,26 +1,34 @@
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, send_file, jsonify, abort
 from PIL import Image, ImageDraw, ImageFont
 import requests
+import time
+import uuid
 from io import BytesIO
 
 app = Flask(__name__)
 
-# Default logo URL can still be used if none is provided in the request.
 DEFAULT_LOGO_URL = "https://i.postimg.cc/pLmxYnmy/image-1.png"
 FONT_PATH = "Montserrat-Bold.ttf"
+
+# Store images in memory for a short time:
+#  key: str (UUID)
+#  value: {
+#    "data": bytes,
+#    "expires_at": float (timestamp)
+#  }
+EPHEMERAL_STORE = {}
+
+# Lifetime in seconds
+IMAGE_LIFETIME = 60  # 1 minute
 
 @app.route('/')
 def home():
     return "Flask Image Editor is running!"
 
 def wrap_text(draw, text, font, max_width):
-    """
-    Splits 'text' into multiple lines so that
-    each line does not exceed 'max_width'.
-    """
     words = text.split()
     if not words:
-        return [""]  # Handle empty text
+        return [""]
 
     lines = []
     current_line = words[0]
@@ -34,69 +42,65 @@ def wrap_text(draw, text, font, max_width):
             lines.append(current_line)
             current_line = word
 
-    lines.append(current_line)  # Add the last line
+    lines.append(current_line)
     return lines
 
 @app.route('/edit_image', methods=['POST'])
 def edit_image():
+    """
+    1. Generate the edited image (same logic).
+    2. Store the result in EPHEMERAL_STORE with a UUID.
+    3. Return a JSON object containing a temporary URL.
+    """
     try:
         data = request.get_json()
         image_url = data.get("image_url")
         text = data.get("text", "Default Text")
         logo_url = data.get("logo_url", DEFAULT_LOGO_URL)
 
-        # 1. Download and load the base image
+        # Download base image
         response = requests.get(image_url)
         img = Image.open(BytesIO(response.content)).convert("RGB")
         img = img.resize((1080, 1080), Image.LANCZOS)
 
-        # 2. Download and resize the logo using the provided logo_url
+        # Download and resize the logo
         logo_response = requests.get(logo_url)
         logo = Image.open(BytesIO(logo_response.content)).convert("RGBA")
         logo = logo.resize((252, 44), Image.LANCZOS)
 
-        # 3. Create a vertical gradient from bottom (80% black) to midpoint (0% black)
-        half_height = img.height // 2  # The gradient will cover the bottom half
-        # Single-column gradient (1 px wide, half_height tall)
+        # Create a vertical gradient for the bottom half
+        half_height = img.height // 2
         gradient_col = Image.new('L', (1, half_height), 0)
-        
-        # Fill from top (0% alpha) to bottom (80% alpha = ~204)
         for y in range(half_height):
             alpha = int(204 * (y / float(half_height - 1)))
             gradient_col.putpixel((0, y), alpha)
-
-        # Stretch that single-column gradient to the full image width
         gradient = gradient_col.resize((img.width, half_height))
 
-        # 4. Paste the black rectangle masked by our gradient onto the bottom half
+        # Apply gradient overlay
         gradient_overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
         black_rect = Image.new("RGBA", (img.width, half_height), (0, 0, 0, 255))
         gradient_overlay.paste(black_rect, (0, img.height - half_height), gradient)
-
-        # 5. Merge the gradient overlay with the image
         img = Image.alpha_composite(img.convert("RGBA"), gradient_overlay)
 
-        # 6. Paste the logo (centered, 50px from bottom)
+        # Paste the logo
         logo_x = (img.width - logo.width) // 2
         logo_y = img.height - logo.height - 50
         img.paste(logo, (logo_x, logo_y), logo)
 
-        # 7. Prepare to draw text (wrap to avoid overflow)
+        # Prepare and draw text
         draw = ImageDraw.Draw(img)
         font_size = 56
         font = ImageFont.truetype(FONT_PATH, font_size)
 
-        max_text_width = int(img.width * 0.85)  # 85% of width
+        max_text_width = int(img.width * 0.85)
         lines = wrap_text(draw, text, font, max_text_width)
-        line_height = draw.textbbox((0, 0), "Ay", font=font)[3]  # approximate line height
+        line_height = draw.textbbox((0, 0), "Ay", font=font)[3]
         num_lines = len(lines)
 
-        # 8. Calculate total text height & position
         total_text_height = line_height * num_lines
-        bottom_line_y = logo_y - 42 - line_height  # Bottom line is 42px above the logo
+        bottom_line_y = logo_y - 42 - line_height
         top_line_y = bottom_line_y - (num_lines - 1) * line_height
 
-        # 9. Draw each line centered horizontally
         current_y = top_line_y
         for line in lines:
             text_width, _ = draw.textbbox((0, 0), line, font=font)[2:]
@@ -104,15 +108,71 @@ def edit_image():
             draw.text((text_x, current_y), line, font=font, fill=(255, 255, 255, 255))
             current_y += line_height
 
-        # 10. Output final image
+        # Convert final image to bytes
         output = BytesIO()
         img.convert("RGB").save(output, format="JPEG", quality=90)
         output.seek(0)
 
-        return send_file(output, mimetype='image/jpeg')
+        # Generate a unique ID and store the image in memory
+        image_id = str(uuid.uuid4())
+        EPHEMERAL_STORE[image_id] = {
+            "data": output.getvalue(),
+            "expires_at": time.time() + IMAGE_LIFETIME
+        }
+
+        # Construct a temporary URL for retrieval
+        # e.g. https://your-railway-app.com/temp_image/<image_id>
+        # or if testing locally: http://127.0.0.1:10000/temp_image/<image_id>
+        temp_url = request.host_url.rstrip("/") + "/temp_image/" + image_id
+
+        return jsonify({
+            "message": "Image generated successfully",
+            "temp_image_url": temp_url
+        })
 
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/temp_image/<image_id>', methods=['GET'])
+def temp_image(image_id):
+    """
+    This route returns the stored image if it hasn't expired.
+    Otherwise, returns 404.
+    """
+    # Clean up any expired images before checking
+    cleanup_ephemeral_store()
+
+    # Check if the image ID is in the store
+    if image_id not in EPHEMERAL_STORE:
+        # Not found or already expired/removed
+        abort(404, description="Image not found or expired")
+
+    # Retrieve the image data
+    image_entry = EPHEMERAL_STORE[image_id]
+    # Double-check if it's expired
+    if time.time() > image_entry["expires_at"]:
+        # Remove from store and 404
+        EPHEMERAL_STORE.pop(image_id, None)
+        abort(404, description="Image has expired")
+
+    # Return the image as a file
+    return send_file(
+        BytesIO(image_entry["data"]),
+        mimetype='image/jpeg'
+    )
+
+def cleanup_ephemeral_store():
+    """
+    Remove any images that have passed their expiration time.
+    This can be called before each request or on a schedule.
+    """
+    now = time.time()
+    expired_keys = [
+        key for key, val in EPHEMERAL_STORE.items()
+        if now > val["expires_at"]
+    ]
+    for key in expired_keys:
+        EPHEMERAL_STORE.pop(key, None)
 
 if __name__ == '__main__':
     from waitress import serve
