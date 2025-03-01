@@ -126,7 +126,7 @@ def edit_image():
             current_y += line_height
 
         # 6. Draw a rectangle (5px height, 80% width) in the gap between text and logo
-        rect_width = int(img.width * 0.8)
+        rect_width = int(img.width * 0.65)
         rect_height = 8
         rect_color = "#9B050B"
 
